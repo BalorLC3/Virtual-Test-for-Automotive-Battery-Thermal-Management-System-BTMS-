@@ -4,9 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-# Asumiendo que esta es tu configuración de Matplotlib
 plt.rcParams.update({
-    "text.usetex": False, # Setting to False for simplicity unless LaTeX is installed
+    "text.usetex": False, 
     "font.family": "serif",
     "axes.labelsize": 13,
     "xtick.labelsize": 12,
@@ -15,7 +14,7 @@ plt.rcParams.update({
     "axes.spines.right": True,
     "axes.spines.left": True,
     "axes.spines.bottom": True,
-    "figure.figsize": (10.0, 8.0), # Adjusted for better layout
+    "figure.figsize": (10.0, 8.0), 
     "lines.linewidth": 1.4,
     "axes.grid": True,
     "grid.alpha": 0.25,
@@ -43,7 +42,6 @@ def plot_results(df, dt, title, save_path=None):
     time_axis = df['time']
     joules_to_kJ = 0.001
 
-    # === Plot 1: Temperaturas ===
     axes[0].plot(time_axis, df['T_batt'], label='$T_{batt}$')
     axes[0].plot(time_axis, df['T_clnt'], label='$T_{clnt}$')
     axes[0].axhline(y=33.0, color='r', linestyle='--', label='$T_{des}$')
@@ -59,10 +57,10 @@ def plot_results(df, dt, title, save_path=None):
     for ax in axes:
         ax.grid(True)
 
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Adjust layout to make space for suptitle
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95]) 
 
     if save_path:
         plt.savefig(save_path)
-        plt.close(fig) # Close the figure to free memory
+        plt.close(fig) 
     else:
         plt.show()

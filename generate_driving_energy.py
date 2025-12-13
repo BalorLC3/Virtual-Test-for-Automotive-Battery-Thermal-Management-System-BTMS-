@@ -58,10 +58,8 @@ def get_power_from_battery(p_wheels, params):
                Positiva para propulsión, negativa para regeneración.
     """
     if p_wheels >= 0:
-        # Potencia de propulsión (la batería entrega energía)
         p_driv = p_wheels / params['drivetrain_eff']
     else:
-        # Potencia de regeneración (la batería absorbe energía)
         p_driv = p_wheels * params['regen_eff']
     return p_driv
 
@@ -111,15 +109,12 @@ def process_and_save_cycles(
                 skiprows=2, 
                 names=['time_s', 'speed_mph']
             )
-            # print(f"  Procesando {file_key} con sufijo '{config_suffix}'")
 
-            # Pre-procesamiento y cálculos físicos
             df['speed_mps'] = df['speed_mph'] * MPH_TO_MPS
             dt = df['time_s'].diff().iloc[1] if df['time_s'].shape[0] > 1 else 1.0 # Handle single point case
             df['accel_mps2'] = df['speed_mps'].diff() / dt
-            df.fillna({'accel_mps2':0}, inplace=True) # Rellenar el primer NaN con 0
+            df.fillna({'accel_mps2':0}, inplace=True) 
 
-            # Aplicar las funciones de cálculo de potencia
             df['P_wheels_W'] = df.apply(
                 lambda row: get_power_at_wheels(row['speed_mps'], row['accel_mps2'], vehicle_params),
                 axis=1
@@ -129,7 +124,6 @@ def process_and_save_cycles(
                 axis=1
             )
             
-            # Extender el ciclo para alcanzar el tiempo objetivo
             p_driv_profile = df['P_driv_W'].values
             velocity_profile = df['speed_mps'].values
             
@@ -146,11 +140,9 @@ def process_and_save_cycles(
                 p_driv_concatenated = p_driv_profile
                 velocity_concatenated = velocity_profile
 
-            # Recortar al tiempo exacto
             p_driv_final = p_driv_concatenated[:target_time]
             velocity_final = velocity_concatenated[:target_time]
 
-            # Guardar los archivos .npy con el sufijo de configuración
             power_output_filename = f"{file_key}{config_suffix}_driving_energy.npy"
             velocity_output_filename = f"{file_key}{config_suffix}_velocity.npy"
             
@@ -159,7 +151,6 @@ def process_and_save_cycles(
 
             np.save(power_output_path, p_driv_final)
             np.save(velocity_output_path, velocity_final)
-            # print(f"    Guardado: {power_output_filename}, {velocity_output_filename} ({p_driv_final.shape[0]}s)")
             
             generated_files_info.append((file_key, power_output_path, velocity_output_path))
 

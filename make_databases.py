@@ -9,7 +9,7 @@ from generate_driving_energy import process_and_save_cycles, DEFAULT_VEHICLE_PAR
 
 from sys_dynamics_casadi import BatteryThermalSystem, SystemParameters
 from setup import SimConfiguration, run_simulation
-from controllers import Thermostat
+from controllers import Thermostat, SMPC
 from plot_utils import plot_results 
 
 # --- CONFIGURACIÓN GENERAL ---
@@ -29,10 +29,11 @@ T_AMBIENT = 40.0
 INIT_STATE = {'T_batt': 30.0, 'T_clnt': 30.0, 'soc': 0.8}
 SIMULATION_DT = 1.0 # Paso de tiempo de la simulación
 TARGET_CYCLE_TIME = 2740 # Duración deseada de los ciclos en segundos
+T_DES = 33.0
+HORIZON = 5
+ALPHA_SMPC = 0.0016
+N_CLUSTERS_SMPC = 4
 
-# --- DEFINICIÓN DE CONFIGURACIONES DE VEHÍCULO A SIMULAR ---
-# Cada diccionario representa una variación sobre DEFAULT_VEHICLE_PARAMS.
-# Solo especifica los parámetros que difieren de los valores por defecto.
 VEHICLE_CONFIGS_TO_TEST = [
     {'name': 'Standard Sedan', 'mass': 1850.0},
     {'name': 'Heavy Sedan', 'mass': 2000.0},
@@ -86,11 +87,19 @@ def run_simulation_for_cycle_and_config(
     )
 
     params = SystemParameters() 
-    
-    ctrl_thermostat = Thermostat()
+
+    ctrl_SMPC = SMPC(
+        driving_data,
+        velocity_data,
+        dt=SIMULATION_DT,
+        T_des=T_DES,
+        horizon=HORIZON,
+        alpha=ALPHA_SMPC,
+        n_clusters=N_CLUSTERS_SMPC
+    )
 
     env_smpc = BatteryThermalSystem(INIT_STATE, params)
-    df_smpc = run_simulation(env_smpc, ctrl_thermostat, config)
+    df_smpc = run_simulation(env_smpc, ctrl_SMPC, config)
     
     df_smpc['run_id'] = run_id
     df_smpc['vehicle_config_id'] = config_id
@@ -145,8 +154,6 @@ if __name__ == "__main__":
         print(f"\n--- Procesando Configuración de Vehículo: '{config_name}' (ID: {config_id}) ---")
         print(f"  Parámetros: {vehicle_params_summary}")
 
-        # Generar los perfiles de potencia y velocidad para ESTA configuración
-        # y ESTOS ciclos de conducción
         generated_cycles_for_config = process_and_save_cycles(
             RAW_DRIVE_CYCLES_INPUT_PATH, 
             current_vehicle_params, 
@@ -157,7 +164,6 @@ if __name__ == "__main__":
         )
         print(f"  {len(generated_cycles_for_config)} ciclos .npy generados para esta configuración.")
 
-        # Loop a través de los ciclos generados para esta configuración y ejecutar simulaciones
         for cycle_base_name, power_path, velocity_path in generated_cycles_for_config:
             run_id_counter += 1
             df_result = run_simulation_for_cycle_and_config(
@@ -191,7 +197,6 @@ if __name__ == "__main__":
         print("\nColumnas disponibles:")
         print(final_database_df.columns.tolist())
 
-        # Si quieres interactuar con SQL, usarías algo como:
         engine = create_engine('sqlite:///simulation_results.db')
         final_database_df.to_sql('smpc_simulations', con=engine, if_exists='replace', index=False)
         print("\nBase de datos de resultados también guardada en 'simulation_results.db' (SQLite).")
